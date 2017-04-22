@@ -24,4 +24,7 @@ RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring tokenizer
 # Set the workdir to make it easier when entering
 WORKDIR /var/www/html
 
+# Set the metadata
+LABEL maintainer "Ben Freke (benfreke@gmail.com)"
+
 USER www-data
