@@ -19,7 +19,7 @@ USER root
 # Add some extensions that we are always going to need
 #RUN apk add libxml2
 #RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring tokenizer xml
-#RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring tokenizer
+RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring tokenizer
 
 # Set the workdir to make it easier when entering
 WORKDIR /var/www/html

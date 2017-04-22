@@ -1,15 +1,26 @@
 version: '3.1'
 services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - appnet
   nginx:
     image: shippingdocker/nginx:latest
     ports:
-     - "80:80"
+     - "80"
     volumes:
      - ./app:/var/www/html
     networks:
      - appnet
     depends_on:
      - php
+    environment:
+     - VIRTUAL_HOST=laravel.dev
   php:
     image: mine:latest
     volumes:
