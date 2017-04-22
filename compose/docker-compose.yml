@@ -22,7 +22,7 @@ services:
     environment:
      - VIRTUAL_HOST=laravel.dev
   php:
-    image: mine:latest
+    image: baf/php7.1-laravel:0.0.1
     volumes:
      - ./app:/var/www/html
     networks:
