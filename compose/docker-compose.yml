@@ -5,14 +5,16 @@ services:
     container_name: nginx-proxy
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - appnet
   nginx:
-    image: shippingdocker/nginx:latest
+    image: benfreke/nginx-laravel:0.0.1
     ports:
      - "80"
+     - "443"
     volumes:
      - ./app:/var/www/html
     networks:
@@ -22,7 +24,7 @@ services:
     environment:
      - VIRTUAL_HOST=laravel.dev
   php:
-    image: baf/php7.1-laravel:0.0.1
+    image: benfreke/php7.1-laravel:0.0.1
     volumes:
      - ./app:/var/www/html
     networks:
