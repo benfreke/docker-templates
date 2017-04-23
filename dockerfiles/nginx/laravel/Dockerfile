@@ -11,5 +11,3 @@ EXPOSE 80 443
 
 # Default command to always run
 CMD ["nginx", "-g", "daemon off;"]
-#CMD ["nginx"]
-
