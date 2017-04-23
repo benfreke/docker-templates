@@ -1,7 +1,7 @@
 version: '3.1'
 services:
   nginx-proxy:
-    image: jwilder/nginx-proxy
+    image: jwilder/nginx-proxy:alpine
     container_name: nginx-proxy
     ports:
       - "80:80"
@@ -30,7 +30,7 @@ services:
     networks:
      - appnet
   redis:
-    image: redis:alpine
+    image: redis:3.0-alpine
     networks:
      - appnet
   db:
