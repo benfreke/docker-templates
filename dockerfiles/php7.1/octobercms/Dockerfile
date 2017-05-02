@@ -11,7 +11,8 @@ RUN php -r "readfile('http://getcomposer.org/installer');" | php -- --install-di
 
 # Now install our global composer packages
 USER www-data
-RUN composer global require hirak/prestissimo
+RUN composer global require hirak/prestissimo \
+	&& composer clear-cache
 
 # Switch back to the root user for other installation
 USER root
