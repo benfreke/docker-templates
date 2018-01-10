@@ -1,4 +1,4 @@
-FROM php:7.1-fpm-alpine
+FROM php:7.2-fpm-alpine
 
 # ensure www-data user exists
 # ref: https://gist.github.com/briceburg/47131d8caf235334b6114954a6e64922
