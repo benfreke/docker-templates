@@ -1,0 +1,41 @@
+version: '3.1'
+services:
+  nginx:
+    image: benfreke/nginx-laravel:0.0.1
+    ports:
+     - "8080:80"
+     - "443"
+    volumes:
+     - ./api:/var/www/html
+    networks:
+     - appnet
+    depends_on:
+     - php
+  php:
+    image: benfreke/php7.2-laravel:0.0.1
+    volumes:
+     - ./api:/var/www/html
+    networks:
+     - appnet
+  redis:
+    image: redis:3.0-alpine
+    networks:
+     - appnet
+  db-postgres:
+    image: postgres:9.6-alpine
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: homestead
+      POSTGRES_DB: homestead
+    volumes:
+     - data:/var/lib/postgresql/data
+    networks:
+     - appnet
+    ports:
+     - "5432"
+networks:
+  appnet:
+    driver: "bridge"
+volumes:
+  data:
+    driver: "local"
