@@ -4,7 +4,7 @@ FROM nginx:1.11-alpine
 ADD default /etc/nginx/conf.d/default.conf
 
 # Add contact information
-LABEL maintainer "Ben Freke (github.com/benfreke)"
+LABEL maintainer="Ben Freke (github.com/benfreke)"
 
 # http and https enable
 EXPOSE 80 443

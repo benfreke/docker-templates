@@ -6,17 +6,6 @@ RUN set -x \
   addgroup -g 82 -S www-data \
   adduser -u 82 -D -S -G www-data www-data
 
-# Install composer
-RUN php -r "readfile('http://getcomposer.org/installer');" | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Now install our global composer packages
-USER www-data
-RUN composer global require hirak/prestissimo \
-	&& composer clear-cache
-
-# Switch back to the root user for other installation
-USER root
-
 # Add some extensions that we are always going to need
 # Install into alpine what we need to support the install
 # Install using the PHP supported tools
@@ -43,8 +32,8 @@ RUN apk add --no-cache --virtual .build-deps \
         gd \
         mysqli \
         opcache \
-        pdo_pgsql \
         intl \
+        pdo_pgsql \
         pdo_mysql \
         mbstring \
         tokenizer \
@@ -54,6 +43,6 @@ RUN apk add --no-cache --virtual .build-deps \
 WORKDIR /var/www/html
 
 # Set the metadata
-LABEL maintainer "Ben Freke (github.com/benfreke)"
+LABEL maintainer="Ben Freke (github.com/benfreke)"
 
 USER www-data
