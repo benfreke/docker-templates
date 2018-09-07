@@ -45,7 +45,7 @@ services:
       - ./:/var/www/html:delegated
       - npm:/var/www/html/node_modules
     working_dir: /var/www/html
-    command: ['npm', 'run', 'dev']
+    command: ['npm', 'run', 'watch']
   database:
     image: postgres:10-alpine
     networks:
