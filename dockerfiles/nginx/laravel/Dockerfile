@@ -1,7 +1,10 @@
-FROM nginx:1.11-alpine
+FROM nginx:1-alpine
 
 # Add the conf file to the container
 ADD default /etc/nginx/conf.d/default.conf
+
+# Add helper files in case they're needed
+COPY h5bp /etc/nginx/h5bp
 
 # Add contact information
 LABEL maintainer="Ben Freke (github.com/benfreke)"

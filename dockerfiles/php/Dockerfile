@@ -1,11 +1,5 @@
 FROM php:7.2-fpm-alpine
 
-# ensure www-data user exists
-# ref: https://gist.github.com/briceburg/47131d8caf235334b6114954a6e64922
-RUN set -x \
-  addgroup -g 82 -S www-data \
-  adduser -u 82 -D -S -G www-data www-data
-
 # Add some extensions that we are always going to need
 # Install into alpine what we need to support the install
 # Install using the PHP supported tools
@@ -16,6 +10,12 @@ RUN apk add --no-cache --virtual .build-deps \
         postgresql-dev \
         libpng-dev \
         icu-dev \
+        autoconf \
+        gcc \
+        coreutils \
+        g++ \
+        make \
+        git \
     && apk add --no-cache --virtual .required-deps \
         freetype \
         libjpeg-turbo \
@@ -37,12 +37,30 @@ RUN apk add --no-cache --virtual .build-deps \
         pdo_mysql \
         mbstring \
         tokenizer \
-        zip
+        zip \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug
 
 # Set the workdir to make it easier when entering
 WORKDIR /var/www/html
 
+COPY php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
+COPY xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
 # Set the metadata
 LABEL maintainer="Ben Freke (github.com/benfreke)"
 
-USER www-data
+# The entrypoint will set up xdebug if needed
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod 777 /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Install composer (taken from composer dockerfile)
+ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_HOME /tmp
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Install the very handy tool to get multiple packages at the same time
+RUN composer global require hirak/prestissimo

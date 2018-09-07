@@ -1,17 +1,22 @@
 # docker-templates
 
-A collection of Dockerfiles and docker-compose files for easier local development. Do not use these in production.
+A collection of Dockerfiles and docker-compose files for easier local development. Do not use these in production without optimisation
 
-## Understanding the folder structure
+## Assumptions
 
-All images in the dockerfiles directory are built in the namespace benfreke. 
+1. Your path on the server will be `/var/www/html`
+1. For XDebug to work, You have mapped `/var/www/html` to the root of your Laravel project
+1. You add this to your query string when debugging. `XDEBUG_SESSION_START=1&XDEBUG_IDE_KEY=docker`
+1. You will add the needed variables to your `.env` 
+1. You can read the `docker-compose.yml` file to understand what needs to be in the `.env` file
+1. You will not use these in production 
 
-The second level is the folder underneath the `dockerfiles` directory
+## Folder structure
 
-Then the next directory is after the hyphen in the name.
+### compose
 
-e.g. benfreke/nginx-laravel or benfreke/php7.1-laravel
+The collection of docker-compose files
 
-## Using the build file
+### dockerfiles
 
-./build folder1 folder2 tag e.g. `./build.sh php7.1 laravel 0.0.1`
+The collection of various dockerfiles that are useful
