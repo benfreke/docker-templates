@@ -1,3 +1,4 @@
+# This stage is my base PHP image. It does not have composer, etc, as they are not needed for all PHP
 FROM php:7.2-fpm-alpine as base
 
 # Set the metadata
@@ -35,14 +36,27 @@ RUN apk add --no-cache --virtual .build-deps \
         mbstring \
         tokenizer
 
-# Set the workdir to make it easier when entering
+FROM base as application-base
+
+# Set the workdir to make it easier when entering manually
 WORKDIR /var/www/html
 
+# Get a working php-fpm
+# This is correct for PHP7.2 only
 COPY php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
 
+# Install composer (taken from composer dockerfile)
+ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_HOME /tmp
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Run PHP in the foreground so the container continues to run
+# -F run in the foreground
+# -R allow php-fpm to run as root
 ENTRYPOINT ["php-fpm", "-F", "-R"]
 
-FROM base as development
+# This is my development image, so we need to add xdebug so we can use it
+FROM application-base as development
 RUN apk add --no-cache --virtual .build-deps \
         autoconf \
         gcc \
@@ -56,19 +70,16 @@ RUN apk add --no-cache --virtual .build-deps \
     && pecl install xdebug \
     && docker-php-ext-enable xdebug
 
-# Install composer (taken from composer dockerfile)
-ENV COMPOSER_ALLOW_SUPERUSER 1
-ENV COMPOSER_HOME /tmp
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install the very handy tool to get multiple packages at the same time
+RUN composer global require hirak/prestissimo
 
+# Copy xdebug and ensure we can use it
 COPY xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
-# The entrypoint will set up xdebug if needed
+# The entrypoint will set up xdebug if needed and ensure the we have the right number of values in .envs
+# Modify this entrypoint as needed
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN chmod 777 /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# Install the very handy tool to get multiple packages at the same time
-RUN composer global require hirak/prestissimo
