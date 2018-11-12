@@ -16,8 +16,16 @@ A collection of Dockerfiles and docker-compose files for easier local developmen
 
 ### compose
 
-The collection of docker-compose files
+A large docker-compose file, from which to cherry pick sections
 
 ### dockerfiles
 
 The collection of various dockerfiles that are useful
+
+### scripts 
+
+A collection of scripts that make starting and creating images easier
+
+### stack 
+
+A large docker-compose file, from which to cherry pick sections
