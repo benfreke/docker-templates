@@ -66,13 +66,9 @@ services:
       - redis:/data
 networks:
   external:
-    driver: "bridge"
   php:
-    driver: "bridge"
   cache:
-    driver: "bridge"
   database:
-    driver: "bridge"
 volumes:
   pgsql:
   redis:
