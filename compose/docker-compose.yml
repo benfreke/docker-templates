@@ -16,7 +16,7 @@ services:
     ports:
       - "80"
     environment:
-      - VIRTUAL_HOST=jiraui.ben.local
+      - VIRTUAL_HOST=testing.ben.local
     depends_on:
       - nginx-proxy
       - php
@@ -36,7 +36,7 @@ services:
       - ./:/var/www/html:delegated
       - vendor:/var/www/html/vendor
     environment:
-      - XDEBUG_ENABLED=${XDEBUG_ENABLED}
+      - XDEBUG_ENABLED=${XDEBUG_ENABLED:-0}
   node:
     image: node:8.11.4-alpine
     depends_on:
