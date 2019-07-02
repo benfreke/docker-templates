@@ -10,6 +10,7 @@ services:
       - external
   nginx:
     build: ./build/docker/nginx
+    image: example/nginx:1.0.0
     networks:
       - external
       - php
@@ -25,6 +26,7 @@ services:
       - vendor:/var/www/html/vendor
   php:
     build: ./build/docker/php
+    image: example/php:1.0.0
     networks:
       - php
       - cache

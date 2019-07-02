@@ -1,5 +1,5 @@
 # This stage is my base PHP image. It does not have composer, etc, as they are not needed for all PHP
-FROM php:7.3-fpm-alpine as base
+FROM php:7.3.6-fpm-alpine as base
 
 # Set the metadata
 LABEL maintainer="Ben Freke (github.com/benfreke)"
