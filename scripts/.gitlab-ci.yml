@@ -1,0 +1,83 @@
+image: registry.gitlab.com/rentalq/api/ci:latest
+
+variables:
+  MYSQL_ROOT_PASSWORD: secret
+  MYSQL_DATABASE: homestead_testing
+  MYSQL_USER: homestead
+  MYSQL_PASSWORD: secret
+  DB_HOST: mysql
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+
+stages:
+  - build
+  - composer
+  - lint
+  - test
+
+build-docker:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:dind
+  variables:
+    IMAGE_TAG_DEV: $CI_REGISTRY_IMAGE/dev:latest
+    IMAGE_TAG_CI: $CI_REGISTRY_IMAGE/ci:latest
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  only:
+    changes:
+      - build/php73/*
+  script:
+    - echo -n "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+    - docker build -f build/php73/Dockerfile --target application-base -t $IMAGE_TAG_CI build/php73
+    - docker build -f build/php73/Dockerfile --target development -t $IMAGE_TAG_DEV build/php73
+    - docker push $IMAGE_TAG_DEV
+    - docker push $IMAGE_TAG_CI
+
+composer:
+  stage: composer
+  script:
+    - cp .env.testing .env
+    - composer install
+    - php artisan key:generate
+  cache:
+    paths:
+      - vendor/
+
+validphp:
+  stage: lint
+  script:
+    - php -l $(git diff --name-only master | grep '\.php$' | tr '\n' ' ')
+  only:
+    - merge_requests
+    - schedules
+
+phpcs:
+  stage: lint
+  script:
+    - vendor/bin/phpcs --config-set ignore_warnings_on_exit 1
+    - vendor/bin/phpcs $(git diff --name-only $CI_MERGE_REQUEST_TARGET_BRANCH_NAME | grep '\.php$' | tr '\n' ' ') readme.md
+  dependencies:
+    - composer
+  only:
+    - merge_requests
+    - schedules
+
+phpunit:
+  stage: test
+  services:
+    - mysql:5.7
+  script:
+    - composer run-script run-tests
+  dependencies:
+    - composer
+  artifacts:
+    paths:
+      - ./storage/logs
+    expire_in: 1 days
+    when: on_failure
+  only:
+    - merge_requests
+    - schedules
