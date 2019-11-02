@@ -1,4 +1,4 @@
-FROM nginx:1.17.1-alpine
+FROM nginx:1.17.5-alpine
 
 # Add the conf file to the container
 ADD default /etc/nginx/conf.d/default.conf
