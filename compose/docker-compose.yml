@@ -1,4 +1,4 @@
-version: '3.6'
+version: '3.7'
 services:
   nginx-proxy:
     image: jwilder/nginx-proxy:alpine
@@ -9,7 +9,7 @@ services:
     networks:
       - external
   nginx:
-    build: ./build/docker/nginx
+    build: ./build/docker/nginx/laravel
     image: example/nginx:1.0.0
     networks:
       - external
@@ -23,7 +23,6 @@ services:
       - php
     volumes:
       - ./:/var/www/html:delegated
-      - vendor:/var/www/html/vendor
   php:
     build: ./build/docker/php
     image: example/php:1.0.0
@@ -36,7 +35,6 @@ services:
       - cache
     volumes:
       - ./:/var/www/html:delegated
-      - vendor:/var/www/html/vendor
     environment:
       - XDEBUG_ENABLED=${XDEBUG_ENABLED:-0}
   node:
@@ -45,7 +43,6 @@ services:
       - php
     volumes:
       - ./:/var/www/html:delegated
-      - npm:/var/www/html/node_modules
     working_dir: /var/www/html
     command: ['npm', 'run', 'watch']
   database:
@@ -74,5 +71,3 @@ networks:
 volumes:
   pgsql:
   redis:
-  vendor:
-  npm:
