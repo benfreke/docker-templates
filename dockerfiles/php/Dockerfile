@@ -79,6 +79,7 @@ RUN apk add --no-cache --virtual .xdebug-deps \
 COPY xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 # Obviously don't use 777 in production
 RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+RUN chmod 777 /usr/local/etc/php/conf.d
 
 # The entrypoint will set up xdebug based on the flag and ensure the we have the right number of values in .env files
 # Modify this entrypoint as needed
@@ -86,6 +87,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN chmod 777 /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+WORKDIR /var/www/html
 
 # Set the user to not be root now we've installed everything
 USER appuser
