@@ -10,15 +10,23 @@ LABEL maintainer="Ben Freke (github.com/benfreke)"
 # `docker-php-ext-configure` to use the php docker tools to configure GD
 # `--no-cache` to remove cache folders
 RUN apk add --no-cache --virtual .build-deps \
+        autoconf \
         freetype-dev \
         libjpeg-turbo-dev \
-        postgresql-dev \
         libpng-dev \
         icu-dev \
+    # We need PECL for phpredis and xdebug
+    && apk add --no-cache --virtual .pecl-deps \
+        autoconf \
+        coreutils \
+        g++ \
+        gcc \
+        git \
+        make \
+        libzip-dev \
     && apk add --no-cache --virtual .required-deps \
         freetype \
         libjpeg-turbo \
-        postgresql \
         libpng \
         icu-libs \
     && docker-php-ext-configure gd \
@@ -29,13 +37,16 @@ RUN apk add --no-cache --virtual .build-deps \
     && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
     && docker-php-ext-install -j${NPROC} \
         gd \
-        mysqli \
         opcache \
         intl \
-        pdo_pgsql \
-        pdo_mysql \
         mbstring \
-        tokenizer
+        tokenizer \
+        zip
+
+# Install Redis so
+RUN pecl install -o -f redis \
+    && rm -rf /tmp/pear \
+    && docker-php-ext-enable redis
 
 # Get a working php-fpm
 # This is correct for PHP7.3 only
@@ -57,36 +68,66 @@ USER appuser
 # -R allow php-fpm to run as root
 ENTRYPOINT ["php-fpm", "-F", "-R"]
 
-# This is my development image. We add xdebug because it is awesome
-FROM application-base as development
+FROM application-base as fpm-mysql
 
+# We need to install OS packages as the root user
 USER root
 
-RUN apk add --no-cache --virtual .xdebug-deps \
-        autoconf \
-        coreutils \
-        g++ \
-        gcc \
-        git \
-        make \
-        libzip-dev \
-    && docker-php-ext-install \
-        zip \
-    && pecl install xdebug \
+# Only 2 packages :nice:
+RUN NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        mysqli \
+        pdo_mysql
+
+# Now switch back to the appuser as the last command in this block
+USER appuser
+
+FROM application-base as fpm-pgsql
+
+# We need to install OS packages as the root user
+USER root
+
+# Slightly more complicated to install postgres than mysql
+RUN apk add --no-cache --virtual .build-pgsql-deps \
+        postgresql-dev \
+    && apk add --no-cache --virtual .required-pgsql-deps \
+        postgresql \
+    && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        pdo_pgsql
+
+# Now switch back to the appuser as the last command in this block
+USER appuser
+
+# This is my development image. We add xdebug because it is awesome
+FROM fpm-mysql as development
+
+# We need to install OS packages as the root user
+USER root
+
+# Install xdebug via pecl. In theory we could install from sources, but this is easier
+RUN pecl install xdebug \
+    && rm -rf /tmp/pear \
     && docker-php-ext-enable xdebug
 
-# Copy xdebug and ensure we can use it
+# Copy xdebug config and ensure we can use it
 COPY xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 # Obviously don't use 777 in production
-RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-RUN chmod 777 /usr/local/etc/php/conf.d
+RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    # sed takes a backup, so we need permissions on the folder as well
+    && chmod 777 /usr/local/etc/php/conf.d
 
 # The entrypoint will set up xdebug based on the flag and ensure the we have the right number of values in .env files
-# Modify this entrypoint as needed
+# It also checks that we have the same keys between .env and .env.examnple
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-RUN chmod 777 /usr/local/bin/entrypoint.sh
+COPY file-compare.php /usr/local/bin/file-compare.php
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/file-compare.php \
+    && chmod 777 /usr/local/bin/entrypoint.sh \
+    && chmod 777 /usr/local/bin/file-compare.php
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
 WORKDIR /var/www/html
 
 # Set the user to not be root now we've installed everything
