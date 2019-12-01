@@ -1,0 +1,116 @@
+# This stage is my base PHP image. It does not have composer, etc, as they are not needed for all PHP
+FROM php:7.4.0-fpm-alpine as application-base
+
+# Set the metadata
+LABEL maintainer="Ben Freke (github.com/benfreke)"
+
+# Add some extensions that we are always going to need
+# Install into alpine what we need to support the install
+# This is split into build dependencies, and the libraries that actually required
+# `docker-php-ext-configure` to use the php docker tools to configure GD
+# `--no-cache` to remove cache folders
+RUN apk add --no-cache --virtual .build-deps \
+        autoconf \
+        freetype-dev \
+        libjpeg-turbo-dev \
+        libpng-dev \
+        oniguruma-dev \
+        icu-dev \
+    # We need PECL for phpredis and xdebug
+    && apk add --no-cache --virtual .pecl-deps \
+        autoconf \
+        coreutils \
+        g++ \
+        gcc \
+        git \
+        make \
+        libzip-dev \
+    && apk add --no-cache --virtual .required-deps \
+        freetype \
+        libjpeg-turbo \
+        libpng \
+        icu-libs \
+    && docker-php-ext-configure gd \
+        --with-freetype \
+        --with-jpeg \
+    && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        gd \
+        opcache \
+        intl \
+        mbstring \
+        tokenizer \
+        zip
+
+# Install Redis so
+RUN pecl install -o -f redis \
+    && rm -rf /tmp/pear \
+    && docker-php-ext-enable redis
+
+# Get a working php-fpm
+# This is correct for PHP7.4 only
+COPY php-fpm-74.conf /etc/php/7.4/fpm/php-fpm.conf
+
+# Install composer (taken from composer dockerfile)
+# You may want to do a `docker pull composer:latest before building this dockerfile
+ENV COMPOSER_HOME /tmp
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Create a group and user so we're not running as root always
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Tell docker that all future commands should run as the appuser we just created
+USER appuser
+
+# Run PHP in the foreground so the container continues to run
+# -F run in the foreground
+# -R allow php-fpm to run as root
+ENTRYPOINT ["php-fpm", "-F", "-R"]
+
+FROM application-base as fpm-mysql
+
+# We need to install OS packages as the root user
+USER root
+
+# Only 2 packages :nice:
+RUN NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        mysqli \
+        pdo_mysql
+
+# Now switch back to the appuser as the last command in this block
+USER appuser
+
+# This is my development image. We add xdebug because it is awesome
+FROM fpm-mysql as development
+
+# We need to install OS packages as the root user
+USER root
+
+# Install xdebug via pecl. In theory we could install from sources, but this is easier
+RUN pecl install xdebug \
+    && rm -rf /tmp/pear \
+    && docker-php-ext-enable xdebug
+
+# Copy xdebug config and ensure we can use it
+COPY xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+# Obviously don't use 777 in production
+RUN chmod 777 /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    # sed takes a backup, so we need permissions on the folder as well
+    && chmod 777 /usr/local/etc/php/conf.d
+
+# The entrypoint will set up xdebug based on the flag and ensure the we have the right number of values in .env files
+# It also checks that we have the same keys between .env and .env.examnple
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY file-compare.php /usr/local/bin/file-compare.php
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/file-compare.php \
+    && chmod 777 /usr/local/bin/entrypoint.sh \
+    && chmod 777 /usr/local/bin/file-compare.php
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+WORKDIR /var/www/html
+
+# Set the user to not be root now we've installed everything
+USER appuser

@@ -1,5 +1,5 @@
 # This stage is my base PHP image. It does not have composer, etc, as they are not needed for all PHP
-FROM php:7.3.11-fpm-alpine as application-base
+FROM php:7.3.12-fpm-alpine as application-base
 
 # Set the metadata
 LABEL maintainer="Ben Freke (github.com/benfreke)"
@@ -100,7 +100,7 @@ RUN apk add --no-cache --virtual .build-pgsql-deps \
 USER appuser
 
 # This is my development image. We add xdebug because it is awesome
-FROM fpm-mysql as development
+FROM fpm-changethis as development
 
 # We need to install OS packages as the root user
 USER root

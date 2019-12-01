@@ -2,38 +2,100 @@
 
 /**
  * Class CheckFiles
+ *
+ * This class checks the provided .env files (if they exist) and ensures they have the same keys
+ *
+ * This should be called from a shall script with `set -e` for proper behaviour i.e. stop on error
  */
 class CheckFiles
 {
-    private const ARRAY_KEY_FILENAME = 'CHECK_FILES_FILENAME';
+    /**
+     * Static key used to allow nice messages in the output
+     */
+    private const ARRAY_KEY_FOR_FILENAME = 'CHECK_FILES_FILENAME';
 
+    /**
+     * @var string The absolute path to the directory containing files to check
+     */
     private $directoryToCheck = '';
+
+    /**
+     * @var array The ini files to be compared
+     */
+    private $filesToCheck = [];
 
     /**
      * CheckFiles constructor.
      *
-     * @param string|null $defaultDirectory absolute patah to directory containing your .env files
+     * @param array $extraFilesToCheck An array of ini files, relative to defaultDirectory, to compare
+     * @param string|null $defaultDirectory absolute patah to directory containing your .env files. Null means __DIR__
      */
-    public function __construct(?string $defaultDirectory = '/var/www/html')
+    public function __construct(array $extraFilesToCheck = [], ?string $defaultDirectory = '/var/www/html')
     {
+        // Ensure we always have a default directory
         if (empty($defaultDirectory)) {
             $defaultDirectory = __DIR__;
         }
-        $this->setDefaultDirectory($defaultDirectory);
+
+        // Set up the defaults
+        $this->setDefaultDirectory($defaultDirectory)
+            ->addExtraFile('.env')
+            ->addExtraFile('.env.example');
+
+        // Add any extra files that we want to check
+        foreach ($extraFilesToCheck as $extraFile) {
+            $this->addExtraFile($extraFile);
+        }
     }
 
     /**
+     * Adds the given file to the array to be checked
      *
+     * If the file doesn't exist, it will not be added
+     *
+     * @param string $fileToAdd
+     *
+     * @return $this
      */
-    public function checkFiles()
+    private function addExtraFile(string $fileToAdd): self
+    {
+        $pathToFile = $this->getFilePath($fileToAdd);
+
+        // If the file doesn't exist, return early
+        if (!file_exists($pathToFile)) {
+            return $this;
+        }
+        $this->filesToCheck[] = $fileToAdd;
+        return $this;
+    }
+
+    /**
+     * Checks that keys match in the .env files
+     */
+    public function execute()
     {
         $result = [];
-        $result[] = $this->checkArrays($this->getEnv(), $this->getEnvExample());
-        $result[] = $this->checkArrays($this->getEnvExample(), $this->getEnv());
 
-        // If we have a testing file, check that against the example file
-        if (file_exists($this->directoryToCheck . '/' . '.env.testing')) {
-            $result[] = [];
+        // Loop through the array of ini files to check, and compare them all against each other
+        $filesCount = count($this->filesToCheck);
+        for ($i = 0; $i < $filesCount; $i++) {
+            // Check forward if we can
+            $localIndex = $i;
+            while (++$localIndex < $filesCount) {
+                $result[] = $this->checkArrays(
+                    $this->getIniFile($this->filesToCheck[$i]),
+                    $this->getIniFile($this->filesToCheck[$localIndex])
+                );
+            }
+
+            // Check back if we can
+            $localIndex = $i;
+            while (--$localIndex >= 0) {
+                $result[] = $this->checkArrays(
+                    $this->getIniFile($this->filesToCheck[$i]),
+                    $this->getIniFile($this->filesToCheck[$localIndex])
+                );
+            }
         }
 
         // Clean out empty values
@@ -45,6 +107,7 @@ class CheckFiles
             exit(0);
         }
 
+        // Write to stderr so the calling shell script exits properly
         fwrite(STDERR, "Errors discovered. Exiting" . PHP_EOL . PHP_EOL);
 
         // echo each error to stderr
@@ -54,6 +117,35 @@ class CheckFiles
 
         // Always exit 1 to ensure scripts stop safely
         exit(1);
+    }
+
+    /**
+     * @param string $fileName
+     *
+     * @return array parsed file or empty array
+     */
+    private function getIniFile(string $fileName): array
+    {
+        $pathToFile = $this->getFilePath($fileName);
+
+        // Convert the file to an array
+        $fileAsArray = parse_ini_file($pathToFile);
+        if (!$fileAsArray) {
+            return [];
+        }
+        // Add the filename
+        $fileAsArray[static::ARRAY_KEY_FOR_FILENAME] = $fileName;
+        return $fileAsArray;
+    }
+
+    /**
+     * @param string $fileName
+     *
+     * @return string The absolute path to $fileName
+     */
+    private function getFilePath(string $fileName): string
+    {
+        return $this->directoryToCheck . '/' . $fileName;
     }
 
     /**
@@ -67,11 +159,8 @@ class CheckFiles
         $result = null;
         $arrayDifference = array_diff_key($first, $second);
         if (!empty($arrayDifference)) {
-            $result = "{$first[static::ARRAY_KEY_FILENAME]} has keys that {$second[static::ARRAY_KEY_FILENAME]} does not." . PHP_EOL;
-            $result .= "Offending keys:" . PHP_EOL;
-            foreach ($arrayDifference as $key => $value) {
-                $result .= $key . PHP_EOL;
-            }
+            $result = "{$first[static::ARRAY_KEY_FOR_FILENAME]} has keys that {$second[static::ARRAY_KEY_FOR_FILENAME]} does not." . PHP_EOL;
+            $result .= "Offending keys: " . implode(', ', array_keys($arrayDifference)) . PHP_EOL;
         }
         return $result;
     }
@@ -86,53 +175,6 @@ class CheckFiles
         $this->directoryToCheck = $directoryToSet;
         return $this;
     }
-
-    /**
-     * Adds the .env file to the files to check
-     *
-     * @return array
-     */
-    private function getEnv(): array
-    {
-        return $this->getFileAsArray('.env');
-    }
-
-    /**
-     * @return array
-     */
-    private function getEnvExample()
-    {
-        return $this->getFileAsArray('.env.example');
-    }
-
-    /**
-     *
-     * @return array
-     */
-    private function getEnvTesting()
-    {
-        $this->filesToCheck[] = $this->getFileAsArray('.env.testing');
-    }
-
-    /**
-     * Get a ini file and return the values as an array
-     *
-     * @param string $fileName
-     *
-     * @return array
-     */
-    private function getFileAsArray(string $fileName): array
-    {
-        $fileAsArray = parse_ini_file($this->directoryToCheck . '/' . $fileName);
-        if (!$fileAsArray) {
-            return [];
-        }
-        $fileAsArray[static::ARRAY_KEY_FILENAME] = $fileName;
-        return $fileAsArray;
-    }
 }
 
-$myFileChecker = new CheckFiles();
-$myFileChecker->checkFiles();
-
-
+(new CheckFiles(['.env.testing']))->execute();

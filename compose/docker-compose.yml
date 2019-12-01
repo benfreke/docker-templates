@@ -42,7 +42,8 @@ services:
   php:
     build:
       context: ./scripts/dockerfiles/php/
-      target: development
+      target: set-your-target
+      dockerfile: set-your-dockerfile
     image: gitlab-management/php:1.0.0
     init: true
     networks:
