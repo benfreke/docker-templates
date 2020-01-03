@@ -38,7 +38,7 @@ services:
       - "80:80"
     volumes:
       - ./:/var/www/html:cached
-      - ./scripts/nginx/conf.d/:/etc/nginx/conf.d/
+      - ./scripts/nginx/conf.d/:/etc/nginx/conf.d/:cached
   php:
     build:
       context: ./scripts/dockerfiles/php/
@@ -73,7 +73,7 @@ services:
   database-mysql:
     <<: *db-mysql
     volumes:
-      - mysql:/var/lib/mysql
+      - mysql:/var/lib/mysql:delegated
 
   database-mysql-testing:
     *db-mysql
