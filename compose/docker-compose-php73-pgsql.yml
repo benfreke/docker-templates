@@ -1,19 +1,5 @@
 version: '3.7'
 
-# The mysql template. This is shared between 2 services
-x-mysql:
-  &db-mysql
-  image: mysql:8.0
-  init: true
-  environment:
-    MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-    MYSQL_DATABASE: ${DB_DATABASE}
-    MYSQL_USER: ${DB_USERNAME}
-    MYSQL_PASSWORD: ${DB_PASSWORD}
-  command: ["--default-authentication-plugin=mysql_native_password"]
-  networks:
-    - database
-
 # The postgres template. This is shared between 2 services
 x-pgsql:
   &db-pgsql
@@ -42,8 +28,8 @@ services:
   php:
     build:
       context: ./scripts/dockerfiles/php/
-      target: set-your-target
-      dockerfile: set-your-dockerfile
+      target: development
+      dockerfile: Dockerfile-73-pgsql
     image: gitlab-management/php:1.0.0
     init: true
     networks:
@@ -51,7 +37,7 @@ services:
       - cache
       - database
     depends_on:
-      - database-mysql
+      - database-pgsql
       - nginx
       - redis
     volumes:
@@ -70,14 +56,6 @@ services:
   database-pgsql-testing:
     *db-pgsql
 
-  database-mysql:
-    <<: *db-mysql
-    volumes:
-      - mysql:/var/lib/mysql:delegated
-
-  database-mysql-testing:
-    *db-mysql
-
   redis:
     image: redis:alpine
     init: true
@@ -92,4 +70,3 @@ networks:
 
 volumes:
   pgsql:
-  mysql:

@@ -1,0 +1,72 @@
+version: '3.7'
+
+# The postgres template. This is shared between 2 services
+x-pgsql:
+  &db-pgsql
+  image: postgres:12-alpine
+  init: true
+  environment:
+    POSTGRES_PASSWORD: ${DB_PASSWORD}
+    POSTGRES_USER:  ${DB_USERNAME}
+    POSTGRES_DB:  ${DB_DATABASE}
+  networks:
+    - database
+
+services:
+  nginx:
+    image: nginx:1.17.5-alpine
+    restart: on-failure
+    init: true
+    networks:
+      - external
+      - php
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html:cached
+      - ./scripts/nginx/conf.d/:/etc/nginx/conf.d/:cached
+  php:
+    build:
+      context: ./scripts/dockerfiles/php/
+      target: development
+      dockerfile: Dockerfile-74-pgsql
+    image: gitlab-management/php:1.0.0
+    init: true
+    networks:
+      - php
+      - cache
+      - database
+    depends_on:
+      - database-pgsql
+      - nginx
+      - redis
+    volumes:
+      - ./:/var/www/html:delegated
+    # Add this key with a value of 1 to .env to enable xdebug
+    environment:
+      - XDEBUG_ENABLED=${XDEBUG_ENABLED:-0}
+      - PHP_IDE_CONFIG=serverName=my.example.site
+      - XDEBUG_CONFIG=idekey=docker
+
+  database-pgsql:
+    <<: *db-pgsql
+    volumes:
+      - pgsql:/var/lib/postgresql/data:delegated
+
+  database-pgsql-testing:
+    *db-pgsql
+
+  redis:
+    image: redis:alpine
+    init: true
+    networks:
+      - cache
+
+networks:
+  external:
+  php:
+  cache:
+  database:
+
+volumes:
+  pgsql:

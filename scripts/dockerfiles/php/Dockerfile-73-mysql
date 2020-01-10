@@ -1,5 +1,5 @@
 # This stage is my base PHP image. It does not have composer, etc, as they are not needed for all PHP
-FROM php:7.4.0-fpm-alpine as application-base
+FROM php:7.3.12-fpm-alpine as application-base
 
 # Set the metadata
 LABEL maintainer="Ben Freke (github.com/benfreke)"
@@ -14,9 +14,8 @@ RUN apk add --no-cache --virtual .build-deps \
         freetype-dev \
         libjpeg-turbo-dev \
         libpng-dev \
-        oniguruma-dev \
         icu-dev \
-    # We need PECL for phpredis for everything and xdebug for development
+    # We need PECL for phpredis and xdebug
     && apk add --no-cache --virtual .pecl-deps \
         autoconf \
         coreutils \
@@ -31,8 +30,10 @@ RUN apk add --no-cache --virtual .build-deps \
         libpng \
         icu-libs \
     && docker-php-ext-configure gd \
-        --with-freetype \
-        --with-jpeg \
+        --with-gd \
+        --with-freetype-dir=/usr/include/ \
+        --with-png-dir=/usr/include/ \
+        --with-jpeg-dir=/usr/include/ \
     && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
     && docker-php-ext-install -j${NPROC} \
         gd \
@@ -48,8 +49,8 @@ RUN pecl install -o -f redis \
     && docker-php-ext-enable redis
 
 # Get a working php-fpm
-# This is correct for PHP7.4 only
-COPY php-fpm-74.conf /etc/php/7.4/fpm/php-fpm.conf
+# This is correct for PHP7.3 only
+COPY php-fpm-73.conf /etc/php/7.3/fpm/php-fpm.conf
 
 # Install composer (taken from composer dockerfile)
 # You may want to do a `docker pull composer:latest before building this dockerfile
@@ -67,8 +68,22 @@ USER appuser
 # -R allow php-fpm to run as root
 ENTRYPOINT ["php-fpm", "-F", "-R"]
 
+FROM application-base as fpm-mysql
+
+# We need to install OS packages as the root user
+USER root
+
+# Only 2 packages :nice:
+RUN NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        mysqli \
+        pdo_mysql
+
+# Now switch back to the appuser as the last command in this block
+USER appuser
+
 # This is my development image. We add xdebug because it is awesome
-FROM application-base as development
+FROM fpm-mysql as development
 
 # We need to install OS packages as the root user
 USER root

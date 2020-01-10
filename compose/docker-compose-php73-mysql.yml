@@ -1,0 +1,74 @@
+version: '3.7'
+
+# The mysql template. This is shared between 2 services
+x-mysql:
+  &db-mysql
+  image: mysql:8.0
+  init: true
+  environment:
+    MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    MYSQL_DATABASE: ${DB_DATABASE}
+    MYSQL_USER: ${DB_USERNAME}
+    MYSQL_PASSWORD: ${DB_PASSWORD}
+  command: ["--default-authentication-plugin=mysql_native_password"]
+  networks:
+    - database
+
+services:
+  nginx:
+    image: nginx:1.17.5-alpine
+    restart: on-failure
+    init: true
+    networks:
+      - external
+      - php
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html:cached
+      - ./scripts/nginx/conf.d/:/etc/nginx/conf.d/:cached
+  php:
+    build:
+      context: ./scripts/dockerfiles/php/
+      target: development
+      dockerfile: Dockerfile-73-mysql
+    image: gitlab-management/php:1.0.0
+    init: true
+    networks:
+      - php
+      - cache
+      - database
+    depends_on:
+      - database-mysql
+      - nginx
+      - redis
+    volumes:
+      - ./:/var/www/html:delegated
+    # Add this key with a value of 1 to .env to enable xdebug
+    environment:
+      - XDEBUG_ENABLED=${XDEBUG_ENABLED:-0}
+      - PHP_IDE_CONFIG=serverName=my.example.site
+      - XDEBUG_CONFIG=idekey=docker
+
+  database-mysql:
+    <<: *db-mysql
+    volumes:
+      - mysql:/var/lib/mysql:delegated
+
+  database-mysql-testing:
+    *db-mysql
+
+  redis:
+    image: redis:alpine
+    init: true
+    networks:
+      - cache
+
+networks:
+  external:
+  php:
+  cache:
+  database:
+
+volumes:
+  mysql:

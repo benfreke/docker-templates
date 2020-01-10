@@ -16,7 +16,7 @@ RUN apk add --no-cache --virtual .build-deps \
         libpng-dev \
         oniguruma-dev \
         icu-dev \
-    # We need PECL for phpredis for everything and xdebug for development
+    # We need PECL for phpredis and xdebug
     && apk add --no-cache --virtual .pecl-deps \
         autoconf \
         coreutils \
@@ -67,8 +67,25 @@ USER appuser
 # -R allow php-fpm to run as root
 ENTRYPOINT ["php-fpm", "-F", "-R"]
 
+FROM application-base as fpm-pgsql
+
+# We need to install OS packages as the root user
+USER root
+
+# Only 2 packages :nice:
+RUN apk add --no-cache --virtual .build-pgsql-deps \
+            postgresql-dev \
+        && apk add --no-cache --virtual .required-pgsql-deps \
+            postgresql \
+    && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
+    && docker-php-ext-install -j${NPROC} \
+        pdo_pgsql
+
+# Now switch back to the appuser as the last command in this block
+USER appuser
+
 # This is my development image. We add xdebug because it is awesome
-FROM application-base as development
+FROM fpm-pgsql as development
 
 # We need to install OS packages as the root user
 USER root
