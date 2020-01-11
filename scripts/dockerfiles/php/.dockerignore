@@ -1,3 +1,4 @@
+# Put this in the root of the context of your docker build command
 .git
 .idea
 .env
