@@ -37,9 +37,10 @@ services:
       - cache
       - database
     depends_on:
-      - database-pgsql
       - nginx
       - redis
+      - database
+      - database-testing
     volumes:
       - ./:/var/www/html:delegated
     # Add this key with a value of 1 to .env to enable xdebug
@@ -48,12 +49,12 @@ services:
       - PHP_IDE_CONFIG=serverName=my.example.site
       - XDEBUG_CONFIG=idekey=docker
 
-  database-pgsql:
+  database:
     <<: *db-pgsql
     volumes:
       - pgsql:/var/lib/postgresql/data:delegated
 
-  database-pgsql-testing:
+  database-testing:
     *db-pgsql
 
   redis:

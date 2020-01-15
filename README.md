@@ -7,6 +7,7 @@ A collection of Dockerfiles and Docker Compose files for easier local developmen
 1. Make sure [Docker](https://docs.docker.com/) is installed on your macahine
 1. Copy the entire `scripts` directory to your project
 1. Copy the chosen docker-compose file (from the `compose` directory) to the root of your project, and rename it to `docker-compose.yml`
+    1. The format of the filename is `docker-compose-<phpVersion>-<databaseType>.yml`
 1. In your terminal, type the command `docker-compose up`
 
 ## Assumptions
