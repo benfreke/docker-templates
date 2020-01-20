@@ -32,7 +32,7 @@ services:
       context: ./scripts/dockerfiles/php/
       target: development
       dockerfile: Dockerfile-73-mysql
-    image: gitlab-management/php:1.0.0
+    image: image-naame/php:1.0.0
     init: true
     networks:
       - php
@@ -48,7 +48,7 @@ services:
     # Add this key with a value of 1 to .env to enable xdebug
     environment:
       - XDEBUG_ENABLED=${XDEBUG_ENABLED:-0}
-      - PHP_IDE_CONFIG=serverName=my.example.site
+      - PHP_IDE_CONFIG=serverName=my.local.site
       - XDEBUG_CONFIG=idekey=docker
 
   database:
