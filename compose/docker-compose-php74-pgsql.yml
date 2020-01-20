@@ -52,7 +52,7 @@ services:
   database:
     <<: *db-pgsql
     volumes:
-      - pgsql:/var/lib/postgresql/data:delegated
+      - pgsql:/var/lib/postgresql/data
 
   database-testing:
     *db-pgsql

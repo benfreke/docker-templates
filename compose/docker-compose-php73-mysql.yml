@@ -54,7 +54,7 @@ services:
   database:
     <<: *db-mysql
     volumes:
-      - mysql:/var/lib/mysql:delegated
+      - mysql:/var/lib/mysql
 
   database-testing:
     *db-mysql
