@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Bootstrap the web container when running within docker-compose locally.
 # This is called by the "command:" key in docker-compose.yml.
@@ -8,23 +8,48 @@ set -euo pipefail
 main () {
   echo 'Starting test suite'
 
+  testComposeFiles
+
+  echo 'Finished test suite'
+}
+
+testComposeFiles () {
+
   # Check that I have valid compose files
   for phpVersion in '73' '74' ; do
-    cp compose/docker-compose-php${phpVersion}.yml docker-compose.yml
-    docker-compose config --quiet
-    # Now test the other db versions
+    testComposeFile $phpVersion
     for dbType in 'mysql' 'pgsql' ; do
-      # To avoid warnings, copy over my .env examples
-      cp env-files/env-${dbType}.example .env
-      cp compose/docker-compose-php${phpVersion}-${dbType}.yml docker-compose.yml
-      docker-compose config --quiet
+      testComposeFile $phpVersion $dbType
     done
   done
 
-  # clean up everything
-  rm docker-compose.yml
-  rm .env
-  echo 'Finished test suite'
+}
+
+# Test our compose files continue to work
+testComposeFile () {
+  ENV_FILE_TO_COPY=''
+  if [ $# -eq 2 ]; then
+    ENV_FILE_TO_COPY=env-files/env-${2}.example
+    COMPOSE_FILE_TO_COPY=compose/docker-compose-php${1}-${2}.yml
+  else
+    COMPOSE_FILE_TO_COPY=compose/docker-compose-php${1}.yml
+  fi
+  echo "$COMPOSE_FILE_TO_COPY"
+
+  # Copy the file
+  cp "$COMPOSE_FILE_TO_COPY" docker-compose.yml
+
+  # Potentially copy to .env
+  if [ ! -z "$ENV_FILE_TO_COPY" ]; then
+    cp "$ENV_FILE_TO_COPY" .env
+  fi
+
+  # Now make sure the config is good
+  docker-compose config --quiet
+
+  # Clean up
+  rm -f .env
+  rm -f docker-compose.yml
 }
 
 main "$@"
