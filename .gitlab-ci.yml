@@ -1,5 +1,4 @@
 run-tests:
   image: arcatdmz/docker-compose-git
   script:
-    - chmod +x tests/test.sh
     - ./tests/test.sh
