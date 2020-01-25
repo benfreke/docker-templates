@@ -27,6 +27,7 @@ services:
       - nginx
       - redis
     volumes:
+      - ~/.composer:/tmp:delegated
       - ./:/var/www/html:delegated
     # Add this key with a value of 1 to .env to enable xdebug
     environment:

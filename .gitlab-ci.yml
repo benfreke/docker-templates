@@ -1,0 +1,4 @@
+run-tests:
+  image: arcatdmz/docker-compose-git
+  script:
+    - ./tests/test.sh
