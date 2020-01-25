@@ -10,17 +10,20 @@ main () {
 
   # Check that I have valid compose files
   for phpVersion in '73' '74' ; do
-#    echo docker-compose-php${phpVersion}.yml
     cp compose/docker-compose-php${phpVersion}.yml docker-compose.yml
     docker-compose config --quiet
     # Now test the other db versions
     for dbType in 'mysql' 'pgsql' ; do
-      # Copy the correct env file at this point
+      # To avoid warnings, copy over my .env examples
+      cp env-files/env-${dbType}.example .env
       cp compose/docker-compose-php${phpVersion}-${dbType}.yml docker-compose.yml
       docker-compose config --quiet
     done
   done
+
+  # clean up everything
   rm docker-compose.yml
+  rm .env
   echo 'Finished test suite'
 }
 
