@@ -34,7 +34,6 @@ testComposeFile () {
   else
     COMPOSE_FILE_TO_COPY=compose/docker-compose-php${1}.yml
   fi
-  echo "$COMPOSE_FILE_TO_COPY"
 
   # Copy the file
   cp "$COMPOSE_FILE_TO_COPY" docker-compose.yml
