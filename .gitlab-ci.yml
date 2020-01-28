@@ -1,4 +1,9 @@
-run-tests:
+unit-tests:
   image: arcatdmz/docker-compose-git
   script:
-    - ./tests/test.sh
+    - ./tests/unit.sh
+
+#feature-tests:
+#  image: arcatdmz/docker-compose-git
+#  script:
+#    - ./tests/feature.sh
